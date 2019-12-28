@@ -143,7 +143,42 @@ def create_iot_policy_if_missing(c_iot, region):
             logger.error("unknown error: {}".format(e))
 
 
-def provision_device(thing_name, region, CSR):
+def create_iot_policy_for_user_if_missing(c_iot, thing_arn, identity_id):
+    # TODO create policy to be attached to specified identity_id
+    policy_name = identity_id.replace(":", "@")
+    try:
+        response = c_iot.get_policy(policyName = policy_name)
+        logger.info("policy exists already: response: {}".format(response))
+    except Exception as e:
+        if re.match('.*ResourceNotFoundException.*', str(e)):
+            logger.info("creating iot policy {}".format(policy_name))
+
+            policy_document = '''{
+                "Version": "2012-10-17",
+                "Statement": [{
+                    "Effect": "Allow",
+                    "Action": [
+                        "iot:Publish",
+                        "iot:Receive",
+                        "iot:Subscribe",
+                        "iot:Connect"
+                    ],
+                    "Resource": [ "''' + thing_arn + '''" ]
+                }]
+            }'''
+
+            response = c_iot.create_policy(
+                policyName = policy_name,
+                policyDocument = policy_document
+            )
+            logger.info("response: {}".format(response))
+        else:
+            logger.error("unknown error: {}".format(e))
+
+    return policy_name
+
+
+def provision_device(thing_name, region, CSR, identity_id):
     answer = {}
     logger.info("thing_name: {}, region {}".format(thing_name, region))
     c_iot = boto3.client('iot', region_name = region)
@@ -159,6 +194,17 @@ def provision_device(thing_name, region, CSR):
     # create thing
     response = c_iot.create_thing(thingName = thing_name)
     logger.info("response: {}".format(response))
+
+    thing_arn = response['thingArn']
+    # create policy 
+    policy_name = create_iot_policy_for_user_if_missing(c_iot, thing_arn, identity_id) 
+
+    # attach the polity to identity_id
+    response = c_iot.attach_policy(
+        policyName = policy_name,
+        target = identity_id
+    )
+    logger.info("attach_policy to user response: {}".format(response)) 
 
     if CSR:
         logger.info("CSR received: create_certificate_from_csr")
@@ -199,6 +245,28 @@ def provision_device(thing_name, region, CSR):
     return answer
 
 
+def device_pub_key_pem_for_provisioning(thing_name):
+    c_dynamo = boto3.client('dynamodb')
+    key = {"thing_name": {"S": thing_name}}
+    logger.info("key {}".format(key))
+
+    response = c_dynamo.get_item(TableName = dynamodb_table_name, Key = key)
+    logger.info("response: {}".format(response))
+
+    if 'Item' in response:
+        if 'pub_key_pem' in response['Item']:
+            pub_key_pem = response['Item']['pub_key_pem']['S']
+            logger.info("pub_key_pem: {}".format(pub_key_pem))
+            return pub_key_pem
+        else:
+            logger.warn("no pub_key_pem in result")
+            return ""
+    else:
+        logger.error("thing {} not found in DynamoDB".format(thing_name))
+
+    return "" 
+
+
 def device_marked_for_provisioning(thing_name):
     c_dynamo = boto3.client('dynamodb')
     key = {"thing_name": {"S": thing_name}}
@@ -219,7 +287,7 @@ def device_marked_for_provisioning(thing_name):
     else:
         logger.error("thing {} not found in DynamoDB".format(thing_name))
 
-    return False
+    return False 
 
 
 def update_device_provisioning_status(thing_name, region):
@@ -241,9 +309,12 @@ def update_device_provisioning_status(thing_name, region):
 
 
 def sig_verified(message, sig):
-    f = open(pub_key_file, 'r')
-    pub_key_pem = f.read()
-    f.close()
+    # f = open(pub_key_file, 'r')
+    # pub_key_pem = f.read()
+    # f.close()
+
+    # TODO get pub_key_pem from DB
+    pub_key_pem = device_pub_key_pem_for_provisioning(message) 
 
     pub_key = crypto.load_publickey(crypto.FILETYPE_PEM, pub_key_pem)
     sig = base64.b64decode(sig)
@@ -267,6 +338,7 @@ def lambda_handler(event, context):
     thing_name = None
     thing_name_sig = None
     CSR = None
+    identity_id = None
     answer = {}
 
     if 'body-json' in event:
@@ -275,6 +347,9 @@ def lambda_handler(event, context):
 
         if 'thing-name-sig' in event['body-json']:
             thing_name_sig = event['body-json']['thing-name-sig']
+
+        if 'identity-id' in event['body-json']:
+            identity_id = event['body-json']['identity-id']
 
         if 'CSR' in event['body-json']:
             CSR = event['body-json']['CSR']
@@ -303,6 +378,10 @@ def lambda_handler(event, context):
         logger.error("device is not marked for provisioning")
         return {"status": "error", "message": "you not"}
 
+    if identity_id == None:
+        logger.error("no identity id provided to bind device to")
+        return {"status": "error", "message": "no identity id"}
+
     if 'params' in event and 'header' in event['params'] and 'X-Forwarded-For' in event['params']['header']:
         device_addrs = str(event['params']['header']['X-Forwarded-For']).translate(None, string.whitespace).split(',')
         logger.info(device_addrs)
@@ -313,7 +392,7 @@ def lambda_handler(event, context):
     location = get_ip_location(device_addrs[0])
     if location['latitude'] == None or location['longitude'] == None:
         logger.warn("no latitude or longitude for IP {}, using default region {}".format(device_addrs[0], default_region))
-        answer = provision_device(thing_name, default_region, CSR)
+        answer = provision_device(thing_name, default_region, CSR, identity_id)
         answer['region'] = default_region
         answer['message'] = "no latitude or longitude for IP {}, using default region {}".format(device_addrs[0], default_region)
         answer['status'] = 'success'
@@ -322,7 +401,7 @@ def lambda_handler(event, context):
         lon = float(location['longitude'])
         logger.info("lat: {}, lon: {}".format(lat, lon))
         best_region = find_best_region(lat, lon)
-        answer = provision_device(thing_name, best_region['region'], CSR)
+        answer = provision_device(thing_name, best_region['region'], CSR, identity_id)
         answer['region'] = best_region['region']
         answer['distance'] = best_region['distance']
         answer['status'] = 'success'

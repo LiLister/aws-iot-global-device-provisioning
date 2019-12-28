@@ -40,7 +40,7 @@ from time import gmtime, strftime
 # globals
 
 # signing key file
-priv_key_file = 'global-provisioning.priv.key.pem'
+priv_key_file = 'device5-provisioning.priv.key.pem'
 #pub_key_file = 'global-provisioning.pub.key.pem'
 #rootCAPath = "root.ca.pem"
 rootCAPath = 'root.ca.bundle.pem'
@@ -52,6 +52,7 @@ rootCAPath = 'root.ca.bundle.pem'
 parser = argparse.ArgumentParser(description='Sample device for global provisiong with AWS IoT Core')
 parser.add_argument("-t", "--thing-name", action="store", required=True, dest="thing_name", help="thing name for your device")
 parser.add_argument("-a", "--api-gw", action="store", required=True, dest="api_gw", help="API Gateway URL for device provisioning")
+parser.add_argument("-i", "--identity-id", action="store", required=True, dest="identity_id", help="Identity Id to bind this device to")
 parser.add_argument("-k", "--own-key", action="store_true", dest="use_own_priv_key", default=False,
                     help="Use own private key for the device")
 parser.add_argument("-c", "--continue", action="store_true", dest="continue_provisioning", default=False,
@@ -62,6 +63,7 @@ parser.add_argument("-f", "--fake-device", action="store_true", dest="fake_devic
 args = parser.parse_args()
 thing_name = args.thing_name
 api_gw = args.api_gw
+identity_id = args.identity_id
 use_own_priv_key = args.use_own_priv_key
 continue_provisioning = args.continue_provisioning
 fake_device = args.fake_device
@@ -93,6 +95,7 @@ if os.path.isfile(key_file) and os.path.isfile(cert_file):
 else:
     print("=> provisioning device with AWS IoT Core...")
     print("   thing-name: {}".format(thing_name))
+    print("   identity-id: {}".format(identity_id))
     print("   use_own_priv_key: {}".format(use_own_priv_key))
     cont()
 
@@ -138,9 +141,9 @@ else:
         print("=> faking device name")
         thing_name = str(uuid.uuid4())
 
-    payload = {'thing-name': thing_name, 'thing-name-sig': sig}
+    payload = {'thing-name': thing_name, 'thing-name-sig': sig, 'identity-id' : identity_id}
     if use_own_priv_key:
-        payload = {'thing-name': thing_name, 'thing-name-sig': sig, 'CSR': crypto.dump_certificate_request(crypto.FILETYPE_PEM, csr)}
+        payload = {'thing-name': thing_name, 'thing-name-sig': sig, 'identity-id' : identity_id, 'CSR': crypto.dump_certificate_request(crypto.FILETYPE_PEM, csr)}
 
     print("=> request payload that will be send to the API Gateway...")
     print("   api gateway url: {}".format(api_gw))
