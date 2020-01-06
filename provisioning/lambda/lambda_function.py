@@ -143,7 +143,7 @@ def create_iot_policy_if_missing(c_iot, region):
             logger.error("unknown error: {}".format(e))
 
 
-def create_iot_policy_for_user_if_missing(c_iot, thing_arn, identity_id):
+def create_iot_policy_for_user_if_missing(c_iot, thing_name, identity_id):
     # TODO create policy to be attached to specified identity_id
     policy_name = identity_id.replace(":", "@")
     try:
@@ -155,16 +155,33 @@ def create_iot_policy_for_user_if_missing(c_iot, thing_arn, identity_id):
 
             policy_document = '''{
                 "Version": "2012-10-17",
-                "Statement": [{
-                    "Effect": "Allow",
-                    "Action": [
-                        "iot:Publish",
-                        "iot:Receive",
-                        "iot:Subscribe",
-                        "iot:Connect"
-                    ],
-                    "Resource": [ "''' + thing_arn + '''" ]
-                }]
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Action": "iot:Connect", 
+                        "Resource": "arn:aws:iot:us-east-2:443188300111:*" 
+                    }, 
+                    {
+                        "Effect": "Allow",
+                        "Action": [
+                            "iot:Receive",
+                            "iot:Publish",
+                            "iot:Subscribe"
+                        ],
+                        "Resource": [ 
+                            "arn:aws:iot:us-east-2:443188300111:topic/$aws/things/''' + thing_name  + '''/*",
+                            "arn:aws:iot:us-east-2:443188300111:topicfilter/$aws/things/''' + thing_name + '''/*" 
+                        ] 
+                    },
+                    { 
+                        "Effect": "Allow", 
+                        "Action": [ 
+                            "iot:GetThingShadow", 
+                            "iot:UpdateThingShadow" 
+                        ], 
+                        "Resource": "arn:aws:iot:us-east-2:443188300111:thing/''' + thing_name + '''" 
+                    } 
+                ]
             }'''
 
             response = c_iot.create_policy(
@@ -195,9 +212,9 @@ def provision_device(thing_name, region, CSR, identity_id):
     response = c_iot.create_thing(thingName = thing_name)
     logger.info("response: {}".format(response))
 
-    thing_arn = response['thingArn']
+    # thing_arn = response['thingArn']
     # create policy 
-    policy_name = create_iot_policy_for_user_if_missing(c_iot, thing_arn, identity_id) 
+    policy_name = create_iot_policy_for_user_if_missing(c_iot, thing_name, identity_id) 
 
     # attach the polity to identity_id
     response = c_iot.attach_policy(
