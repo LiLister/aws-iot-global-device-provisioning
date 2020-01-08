@@ -145,7 +145,7 @@ def create_iot_policy_if_missing(c_iot, region):
 
 def create_iot_policy_for_user_if_missing(c_iot, thing_name, identity_id):
     # TODO create policy to be attached to specified identity_id
-    policy_name = identity_id.replace(":", "@")
+    policy_name = identity_id.replace(":", "@") + thing_name.replace(":", "@").replace("_", "-")
     try:
         response = c_iot.get_policy(policyName = policy_name)
         logger.info("policy exists already: response: {}".format(response))

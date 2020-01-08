@@ -40,7 +40,7 @@ from time import gmtime, strftime
 # globals
 
 # signing key file
-priv_key_file = 'device5-provisioning.priv.key.pem'
+priv_key_file = 'device6-provisioning.priv.key.pem'
 #pub_key_file = 'global-provisioning.pub.key.pem'
 #rootCAPath = "root.ca.pem"
 rootCAPath = 'root.ca.bundle.pem'
