@@ -202,6 +202,7 @@ certificatePath = cert_file
 privateKeyPath = key_file
 clientId = thing_name
 topic = "data/" + thing_name + "/misc"
+topic = "$aws/things/mydevice6/shadow/update"
 
 
 myAWSIoTMQTTClient = None

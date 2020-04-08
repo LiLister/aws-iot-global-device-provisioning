@@ -1,0 +1,1 @@
+./global-device.py -t mydevice6 -a https://lxk174bguc.execute-api.us-west-2.amazonaws.com/test/device-provisioning -k -i us-west-2:7a6e7a83-d3c1-47dd-852b-63978315710e
