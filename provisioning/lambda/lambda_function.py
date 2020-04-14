@@ -333,7 +333,7 @@ def device_pub_key_pem_for_provisioning(thing_name):
 
 def device_provisioned_to(sn):
     c_dynamo = boto3.client('dynamodb')
-    attributeValues = '{"sn": {"S":"' + sn + '}}'
+    attributeValues = {"sn": {"S": sn}}
     logger.info("key {}".format(attributeValues))
 
     response = c_dynamo.query(TableName = dynamodb_table_name, 
