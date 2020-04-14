@@ -30,8 +30,8 @@ from time import gmtime, strftime
 from geopy.distance import great_circle
 
 # globals
-ipstack_api_url = 'http://api.ipstack.com/'
-ipstack_api_key = os.environ['IPSTACK_API_KEY']
+# ipstack_api_url = 'http://api.ipstack.com/'
+# ipstack_api_key = os.environ['IPSTACK_API_KEY']
 
 iot_policy_name = 'GlobalDevicePolicy'
 dynamodb_table_name = 'iot-global-provisioning'
@@ -70,13 +70,13 @@ regions = [
 
 default_region = "eu-west-2"
 
-def get_ip_location(ip):
-    request_url = ipstack_api_url + '/' + ip + '?access_key=' + ipstack_api_key
-    logger.debug("request_url: {}".format(request_url))
-    r = requests.get(request_url)
-    j = json.loads(r.text)
-    logger.debug("j: {}".format(j))
-    return j
+# def get_ip_location(ip):
+#     request_url = ipstack_api_url + '/' + ip + '?access_key=' + ipstack_api_key
+#     logger.debug("request_url: {}".format(request_url))
+#     r = requests.get(request_url)
+#     j = json.loads(r.text)
+#     logger.debug("j: {}".format(j))
+#     return j
 
 
 def find_best_region(lat, lon):
@@ -142,10 +142,12 @@ def create_iot_policy_if_missing(c_iot, region):
         else:
             logger.error("unknown error: {}".format(e))
 
+def get_policy_name(thing_name, identity_id):
+    return identity_id.replace(":", "@") + thing_name.replace(":", "@").replace("_", "-")
 
 def create_iot_policy_for_user_if_missing(c_iot, thing_name, identity_id):
-    # TODO create policy to be attached to specified identity_id
-    policy_name = identity_id.replace(":", "@") + thing_name.replace(":", "@").replace("_", "-")
+    # create policy to be attached to specified identity_id
+    policy_name = get_policy_name(thing_name, identity_id)
     try:
         response = c_iot.get_policy(policyName = policy_name)
         logger.info("policy exists already: response: {}".format(response))
@@ -195,7 +197,10 @@ def create_iot_policy_for_user_if_missing(c_iot, thing_name, identity_id):
     return policy_name
 
 
-def provision_device(thing_name, region, CSR, identity_id):
+def provision_device(thing_name, sn, version, region, CSR, identity_id, provisioned_info):
+    thing_nam = thing_name.replace(" ", "-") + sn.replace(":", "-").replace("_", "-")
+    has_previous_user = len(provisioned_info) > 0
+
     answer = {}
     logger.info("thing_name: {}, region {}".format(thing_name, region))
     c_iot = boto3.client('iot', region_name = region)
@@ -209,10 +214,20 @@ def provision_device(thing_name, region, CSR, identity_id):
     create_iot_policy_if_missing(c_iot, region)
 
     # create thing
-    response = c_iot.create_thing(thingName = thing_name)
-    logger.info("response: {}".format(response))
+    if (not has_previous_user):
+        response = c_iot.create_thing(thingName = thing_name)
+        logger.info("create_thing response: {}".format(response))
 
-    # thing_arn = response['thingArn']
+    if (has_previous_user):
+        previous_policy_name = get_policy_name(thing_name, provisioned_info['user_id'])
+        c_iot.detach_policy(
+            policyName = previous_policy_name,
+            target = identity_id
+        )
+        c_iot.delete_policy(
+            policyName = previous_policy_name, 
+        )
+
     # create policy 
     policy_name = create_iot_policy_for_user_if_missing(c_iot, thing_name, identity_id) 
 
@@ -230,7 +245,7 @@ def provision_device(thing_name, region, CSR, identity_id):
             certificateSigningRequest = CSR,
             setAsActive = True
         )
-        logger.debug("response: {}".format(response))
+        logger.debug("create certificate from csr response: {}".format(response))
         certificate_arn = response['certificateArn']
         certificate_id = response['certificateId']
         logger.info("certificate_arn: {}, certificate_id: {}".format(certificate_arn, certificate_id))
@@ -239,25 +254,57 @@ def provision_device(thing_name, region, CSR, identity_id):
         logger.info("no CSR received: create_keys_and_certificate")
         # create key/cert
         response = c_iot.create_keys_and_certificate(setAsActive = True)
-        logger.debug("response: {}".format(response))
+        logger.debug("create keys and certificate response: {}".format(response))
         certificate_arn = response['certificateArn']
         certificate_id = response['certificateId']
         logger.info("certificate_arn: {}, certificate_id: {}".format(certificate_arn, certificate_id))
         answer['certificatePem'] = response['certificatePem']
         answer['PrivateKey'] = response['keyPair']['PrivateKey']
 
+    if (has_previous_user):
+        # detatch from policy and thing_principal 
+        response = c_iot.detach_policy(
+            policyName = iot_policy_name,
+            target = provisioned_info['certificate_arn']
+        )
+        logger.info("detach policy response: {}".format(response))
+
+        response = c_iot.attach_thing_principal(
+            thingName = thing_name,
+            principal = provisioned_info['certificate_arn']
+        )
+        logger.info("attach thing principal response: {}".format(response)) 
+
+        # set to inactivel
+        response = c_iot.update_certificate(
+            principal = provisioned_info['certificate_id'],
+            newStatus='INACTIVE'
+        )
+        logger.info("set certificate to inactive response: {}".format(response)) 
+
+        # delete the certificate
+        c_iot.delete_certificate(
+            principal = provisioned_info['certificate_id'], 
+            forceDelete=True
+        )
+
     # attach policy to certificate
     response = c_iot.attach_policy(
         policyName = iot_policy_name,
         target = certificate_arn
     )
-    logger.info("response: {}".format(response))
+    logger.info("attach policy response: {}".format(response))
 
     response = c_iot.attach_thing_principal(
         thingName = thing_name,
         principal = certificate_arn
     )
-    logger.info("response: {}".format(response))
+    logger.info("attach thing principal response: {}".format(response))
+
+    # bring these value back to update DB
+    answer['certificate_id'] = 'certificate_id'
+    answer['certificate_arn'] = 'certificate_arn'
+    answer['thing_name'] = thing_name
 
     return answer
 
@@ -284,37 +331,45 @@ def device_pub_key_pem_for_provisioning(thing_name):
     return "" 
 
 
-def device_marked_for_provisioning(thing_name):
+def device_provisioned_to(sn):
     c_dynamo = boto3.client('dynamodb')
-    key = {"thing_name": {"S": thing_name}}
+    key = {"sn": {"S": sn}}
     logger.info("key {}".format(key))
 
     response = c_dynamo.get_item(TableName = dynamodb_table_name, Key = key)
     logger.info("response: {}".format(response))
 
     if 'Item' in response:
+        result['sn'] = sn
         if 'prov_status' in response['Item']:
             status = response['Item']['prov_status']['S']
             logger.info("status: {}".format(status))
-            if status == "unprovisioned":
-                return True
+            if status == "provisioned":
+                result = {}
+                result['user_id'] = response['Item']['user_id']['S']
+                result['certificate_id'] = response['Item']['certificate_id']['S']
+                result['certificate_arn'] = response['Item']['certificate_arn']['S']
+
+                return result
         else:
             logger.warn("no status in result")
-            return False
     else:
-        logger.error("thing {} not found in DynamoDB".format(thing_name))
+        logger.error("thing {} not found in DynamoDB".format(sn))
 
-    return False 
+    return {}
 
 
-def update_device_provisioning_status(thing_name, region):
+def update_device_provisioning_status(sn, default_region, thing_name, version, identity_id, other):
     c_dynamo = boto3.client('dynamodb')
     datetime = time.strftime("%Y-%m-%dT%H:%M:%S", gmtime())
 
-    key = {"thing_name": {"S": thing_name}}
+    key = {"sn": {"S": sn}}
     logger.info("key {}".format(key))
-    update_expression = "SET prov_status = :s, prov_datetime = :d, aws_region = :r"
-    expression_attribute_values = {":s": {"S": "provisioned"}, ":d": {"S": datetime}, ":r": {"S": region}}
+    update_expression = "SET prov_status = :s, prov_datetime = :d, aws_region = :r, alias_name = :an, version = :v, " 
+    + "identity-id = :i, thing_name = :tn, cert_id = :ci, cert_arn = :ca"
+    expression_attribute_values = {":s": {"S": "provisioned"}, ":d": {"S": datetime}, ":r": {"S": region},
+    ":an": {"S": thing_name}, ":v": {"S": version}, ":i": {"S": identity_id}, ":tn": {"S": other['thing_name']},
+    ":ci": {"S": other['certificate_id']}, ":ca": {"S": other['certificate_arn']}}
 
     response = c_dynamo.update_item(
         TableName = dynamodb_table_name,
@@ -330,7 +385,7 @@ def sig_verified(message, sig):
     # pub_key_pem = f.read()
     # f.close()
 
-    # TODO get pub_key_pem from DB
+    # get pub_key_pem from DB
     pub_key_pem = device_pub_key_pem_for_provisioning(message) 
 
     pub_key = crypto.load_publickey(crypto.FILETYPE_PEM, pub_key_pem)
@@ -353,6 +408,9 @@ def lambda_handler(event, context):
     logger.info("event: {}".format(event))
 
     thing_name = None
+    sn = None
+    # optional
+    version = '1.0'
     thing_name_sig = None
     CSR = None
     identity_id = None
@@ -364,6 +422,12 @@ def lambda_handler(event, context):
 
         if 'thing-name-sig' in event['body-json']:
             thing_name_sig = event['body-json']['thing-name-sig']
+        
+        if 'sn' in event['body-json']:
+            sn = event['body-json']['sn']
+
+        if 'version' in event['body-json']:
+            version = event['body-json']['version']
 
         if 'identity-id' in event['body-json']:
             identity_id = event['body-json']['identity-id']
@@ -377,6 +441,9 @@ def lambda_handler(event, context):
 
     logger.info("thing_name: {}".format(thing_name))
     logger.info("thing_name_sig: {}".format(thing_name_sig))
+    logger.info("sn: {}".format(sn))
+    logger.info("version: {}".format(version))
+    logger.info('identity-id: {}'.format(identity_id))
     logger.info("CSR: {}".format(CSR))
 
     if thing_name == None:
@@ -391,38 +458,55 @@ def lambda_handler(event, context):
         logger.error("signature could not be verified")
         return {"status": "error", "message": "wrong sig"}
 
-    if not device_marked_for_provisioning(thing_name):
-        logger.error("device is not marked for provisioning")
-        return {"status": "error", "message": "you not"}
+    if sn == None:
+        logger.error("no sn provided")
+        return {"status": "error", "message": "no sn"}
 
     if identity_id == None:
         logger.error("no identity id provided to bind device to")
         return {"status": "error", "message": "no identity id"}
 
-    if 'params' in event and 'header' in event['params'] and 'X-Forwarded-For' in event['params']['header']:
-        device_addrs = str(event['params']['header']['X-Forwarded-For']).translate(None, string.whitespace).split(',')
-        logger.info(device_addrs)
-    else:
-        logger.warn("can not find X-Forwarded-For")
-        return {"status": "error", "message": "no location"}
+    # if 'params' in event and 'header' in event['params'] and 'X-Forwarded-For' in event['params']['header']:
+    #     device_addrs = str(event['params']['header']['X-Forwarded-For']).translate(None, string.whitespace).split(',')
+    #     logger.info(device_addrs)
+    # else:
+    #     logger.warn("can not find X-Forwarded-For")
+    #     return {"status": "error", "message": "no location"}
 
-    location = get_ip_location(device_addrs[0])
-    if location['latitude'] == None or location['longitude'] == None:
-        logger.warn("no latitude or longitude for IP {}, using default region {}".format(device_addrs[0], default_region))
-        answer = provision_device(thing_name, default_region, CSR, identity_id)
-        answer['region'] = default_region
-        answer['message'] = "no latitude or longitude for IP {}, using default region {}".format(device_addrs[0], default_region)
-        answer['status'] = 'success'
-    else:
-        lat = float(location['latitude'])
-        lon = float(location['longitude'])
-        logger.info("lat: {}, lon: {}".format(lat, lon))
-        best_region = find_best_region(lat, lon)
-        answer = provision_device(thing_name, best_region['region'], CSR, identity_id)
-        answer['region'] = best_region['region']
-        answer['distance'] = best_region['distance']
-        answer['status'] = 'success'
+    # location = get_ip_location(device_addrs[0])
+    # if location['latitude'] == None or location['longitude'] == None:
+        # logger.warn("no latitude or longitude for IP {}, using default region {}".format(device_addrs[0], default_region))
+        # logger.info("use fixed aws region for current implementation")
+        # answer = provision_device(thing_name, default_region, CSR, identity_id)
+        # answer['region'] = default_region
+        # answer['message'] = "no latitude or longitude for IP {}, using default region {}".format(device_addrs[0], default_region)
+        # answer['status'] = 'success'
+    # else:
+    #     lat = float(location['latitude'])
+    #     lon = float(location['longitude'])
+    #     logger.info("lat: {}, lon: {}".format(lat, lon))
+    #     best_region = find_best_region(lat, lon)
+    #     answer = provision_device(thing_name, best_region['region'], CSR, identity_id)
+    #     answer['region'] = best_region['region']
+    #     answer['distance'] = best_region['distance']
+    #     answer['status'] = 'success'
 
-    update_device_provisioning_status(thing_name, best_region['region'])
+
+    provisioned_info = device_provisioned_to(sn)
+    if (not 'sn' in provisioned_info):
+        answer['error'] = 'Cound not find device in DB. Contact the manufacturer, please'
+        return answer
+    
+    logger.info("use fixed aws region for current implementation")
+    answer = provision_device(thing_name, sn, version, default_region, CSR, identity_id, provisioned_info)
+    answer['region'] = default_region
+    # answer['message'] = "no latitude or longitude for IP {}, using default region {}".format(device_addrs[0], default_region)
+    answer['status'] = 'success'
+    # update_device_provisioning_status(sn, best_region['region'])
+    update_device_provisioning_status(sn, default_region, thing_name, version, identity_id, answer)
+
+    del answer['user_id']
+    del answer['certificate_id']
+    del answer['certificate_arn']
 
     return answer

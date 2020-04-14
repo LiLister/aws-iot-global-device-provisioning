@@ -53,6 +53,8 @@ parser = argparse.ArgumentParser(description='Sample device for global provision
 parser.add_argument("-t", "--thing-name", action="store", required=True, dest="thing_name", help="thing name for your device")
 parser.add_argument("-a", "--api-gw", action="store", required=True, dest="api_gw", help="API Gateway URL for device provisioning")
 parser.add_argument("-i", "--identity-id", action="store", required=True, dest="identity_id", help="Identity Id to bind this device to")
+parser.add_argument("-s", "--serial-number", action="store", required=True, dest="sn", help="Serial number of this device")
+parser.add_argument("-v", "--version", action="store", required=True, dest="version", help="Version of this device")
 parser.add_argument("-k", "--own-key", action="store_true", dest="use_own_priv_key", default=False,
                     help="Use own private key for the device")
 parser.add_argument("-c", "--continue", action="store_true", dest="continue_provisioning", default=False,
@@ -64,6 +66,8 @@ args = parser.parse_args()
 thing_name = args.thing_name
 api_gw = args.api_gw
 identity_id = args.identity_id
+sn = args.sn
+version = args.version
 use_own_priv_key = args.use_own_priv_key
 continue_provisioning = args.continue_provisioning
 fake_device = args.fake_device
@@ -96,6 +100,8 @@ else:
     print("=> provisioning device with AWS IoT Core...")
     print("   thing-name: {}".format(thing_name))
     print("   identity-id: {}".format(identity_id))
+    print("   sn: {}".format(sn))
+    print("   version: {}".format(version))
     print("   use_own_priv_key: {}".format(use_own_priv_key))
     cont()
 
@@ -107,7 +113,6 @@ else:
     priv_key = crypto.load_privatekey(crypto.FILETYPE_PEM, priv_key_pem)
     sig = crypto.sign(priv_key, thing_name, 'sha256')
     sig = base64.b64encode(sig)
-
 
     # ### Create a Provisioning Request with own private key and CSR
     # If you want to create the private on your own you can send a CSR together with the provisioning request and let AWS IoT issue the certificate.
@@ -141,9 +146,10 @@ else:
         print("=> faking device name")
         thing_name = str(uuid.uuid4())
 
-    payload = {'thing-name': thing_name, 'thing-name-sig': sig, 'identity-id' : identity_id}
+    payload = {'thing-name': thing_name, 'thing-name-sig': sig, 'identity-id' : identity_id, 'sn' : sn, 'version' : version}
     if use_own_priv_key:
-        payload = {'thing-name': thing_name, 'thing-name-sig': sig, 'identity-id' : identity_id, 'CSR': crypto.dump_certificate_request(crypto.FILETYPE_PEM, csr)}
+        payload = {'thing-name': thing_name, 'thing-name-sig': sig, 'identity-id' : identity_id, 'sn' : sn, 'version' : version,
+        'CSR': crypto.dump_certificate_request(crypto.FILETYPE_PEM, csr)}
 
     print("=> request payload that will be send to the API Gateway...")
     print("   api gateway url: {}".format(api_gw))
