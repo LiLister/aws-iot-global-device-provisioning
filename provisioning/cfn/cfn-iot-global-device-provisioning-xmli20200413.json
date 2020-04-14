@@ -65,7 +65,7 @@
             "S3Key": "iot-global-provisioning-xmli20200413.zip"
           },
           "Environment" : {},
-          "Runtime": "python3.7",
+          "Runtime": "python2.7",
           "MemorySize" : 128,
           "Timeout": "60",
         }
