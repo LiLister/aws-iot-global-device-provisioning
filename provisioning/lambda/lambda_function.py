@@ -68,7 +68,7 @@ regions = [
     {"name": "eu-west-2", "lat": "51.7", "lon": "0.1"}
 ]
 
-default_region = "eu-west-2"
+default_region = "us-west-2"
 
 # def get_ip_location(ip):
 #     request_url = ipstack_api_url + '/' + ip + '?access_key=' + ipstack_api_key
@@ -309,8 +309,8 @@ def provision_device(thing_name, sn, version, region, CSR, identity_id, provisio
     logger.info("attach thing principal response: {}".format(response))
 
     # bring these value back to update DB
-    answer['certificate_id'] = 'certificate_id'
-    answer['certificate_arn'] = 'certificate_arn'
+    answer['certificate_id'] = certificate_id
+    answer['certificate_arn'] = certificate_arn
     answer['thing_name'] = thing_name
 
     return answer
@@ -518,7 +518,6 @@ def lambda_handler(event, context):
     # update_device_provisioning_status(sn, best_region['region'])
     update_device_provisioning_status(sn, default_region, thing_name, version, identity_id, answer)
 
-    answer.pop('user_id', None)
     answer.pop('certificate_id', None)
     answer.pop('certificate_arn', None)
 
