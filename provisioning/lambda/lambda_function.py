@@ -344,13 +344,12 @@ def device_provisioned_to(sn):
 
     result = {}
     if 'Count' in response and response['Count'] == 1:
-        item = response['Items'][0] 
         result['sn'] = sn
+        item = response['Items'][0] 
         if 'prov_status' in item:
             status = item['prov_status']['S']
             logger.info("status: {}".format(status))
             if status == "provisioned":
-                result = {}
                 result['user_id'] = item['user_id']['S']
                 result['certificate_id'] = item['certificate_id']['S']
                 result['certificate_arn'] = item['certificate_arn']['S']
