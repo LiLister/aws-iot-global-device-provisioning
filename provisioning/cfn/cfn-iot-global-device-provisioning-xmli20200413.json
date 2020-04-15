@@ -42,6 +42,7 @@
                           "iot:CreateKeysAndCertificate",
                           "iot:AttachPolicy",
                           "dynamodb:GetItem",
+                          "dynamodb:Query",
                           "dynamodb:UpdateItem"
                        ],
                        "Resource":"*"
