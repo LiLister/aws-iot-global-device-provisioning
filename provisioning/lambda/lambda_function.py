@@ -264,17 +264,23 @@ def provision_device(thing_name, sn, version, region, CSR, identity_id, provisio
 
     if (has_previous_user):
         # detatch from policy and thing_principal 
-        response = c_iot.detach_policy(
-            policyName = iot_policy_name,
-            target = provisioned_info['certificate_arn']
-        )
-        logger.info("detach policy response: {}".format(response))
+        try:
+            response = c_iot.detach_policy(
+                policyName = iot_policy_name,
+                target = provisioned_info['certificate_arn']
+            )
+            logger.info("detach policy response: {}".format(response))
+        except Exception as e:
+            logger.error("detach policy failed: " + e.message) 
 
-        response = c_iot.detach_thing_principal(
-            thingName = thing_name,
-            principal = provisioned_info['certificate_arn']
-        )
-        logger.info("attach thing principal response: {}".format(response)) 
+        try:
+            response = c_iot.detach_thing_principal(
+                thingName = thing_name,
+                principal = provisioned_info['certificate_arn']
+            )
+            logger.info("attach thing principal response: {}".format(response)) 
+        except Exception as e:
+            logger.error("detach thing principal failed: " + e.message)
 
         # # set to inactivel
         # response = c_iot.update_certificate(
