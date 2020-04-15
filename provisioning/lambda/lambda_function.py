@@ -367,7 +367,7 @@ def device_provisioned_to(sn):
     else:
         logger.error("thing {} not found in DynamoDB".format(sn))
 
-    return {}
+    return result
 
 
 def update_device_provisioning_status(sn, default_region, thing_name, version, identity_id, other):
