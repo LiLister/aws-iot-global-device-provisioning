@@ -376,8 +376,8 @@ def update_device_provisioning_status(sn, default_region, thing_name, version, i
 
     key = {"thing_name": {"S": thing_name}}
     logger.info("key {}".format(key))
-    update_expression = "SET prov_status = :s, prov_datetime = :d, aws_region = :r, alias_name = :an, version = :v, " 
-    + "identity-id = :i, cert_id = :ci, cert_arn = :ca"
+    update_expression = "SET prov_status = :s, prov_datetime = :d, aws_region = :r, alias_name = :an, version = :v, " \
+        "identity-id = :i, cert_id = :ci, cert_arn = :ca"
     expression_attribute_values = {":s": {"S": "provisioned"}, ":d": {"S": datetime}, ":r": {"S": region},
     ":an": {"S": thing_name}, ":v": {"S": version}, ":i": {"S": identity_id}, 
     ":ci": {"S": other['certificate_id']}, ":ca": {"S": other['certificate_arn']}}
