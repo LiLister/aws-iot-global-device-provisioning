@@ -370,7 +370,7 @@ def device_provisioned_to(sn):
     return result
 
 
-def update_device_provisioning_status(sn, default_region, thing_name, version, identity_id, other):
+def update_device_provisioning_status(sn, region, thing_name, version, identity_id, other):
     c_dynamo = boto3.client('dynamodb')
     datetime = time.strftime("%Y-%m-%dT%H:%M:%S", gmtime())
 
