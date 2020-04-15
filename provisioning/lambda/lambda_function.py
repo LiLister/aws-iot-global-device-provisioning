@@ -518,8 +518,8 @@ def lambda_handler(event, context):
     # update_device_provisioning_status(sn, best_region['region'])
     update_device_provisioning_status(sn, default_region, thing_name, version, identity_id, answer)
 
-    del answer['user_id']
-    del answer['certificate_id']
-    del answer['certificate_arn']
+    answer.pop('user_id', None)
+    answer.pop('certificate_id', None)
+    answer.pop('certificate_arn', None)
 
     return answer
