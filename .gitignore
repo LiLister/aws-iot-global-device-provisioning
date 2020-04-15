@@ -2,3 +2,6 @@
 *.endpoint
 *.swp
 **/*.zip
+script.txt
+test.json
+
