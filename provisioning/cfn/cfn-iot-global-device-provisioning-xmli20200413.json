@@ -41,6 +41,7 @@
                           "iot:DescribeEndpoint",
                           "iot:CreateKeysAndCertificate",
                           "iot:AttachPolicy",
+                          "iot:DetachPolicy", 
                           "dynamodb:GetItem",
                           "dynamodb:Query",
                           "dynamodb:UpdateItem"

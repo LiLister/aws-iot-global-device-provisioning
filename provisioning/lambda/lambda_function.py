@@ -224,9 +224,10 @@ def provision_device(thing_name, sn, version, region, CSR, identity_id, provisio
             policyName = previous_policy_name,
             target = identity_id
         )
-        c_iot.delete_policy(
-            policyName = previous_policy_name, 
-        )
+        # delete policy is too dangerous
+        # c_iot.delete_policy(
+        #     policyName = previous_policy_name, 
+        # )
 
     # create policy 
     policy_name = create_iot_policy_for_user_if_missing(c_iot, thing_name, identity_id) 
@@ -269,24 +270,24 @@ def provision_device(thing_name, sn, version, region, CSR, identity_id, provisio
         )
         logger.info("detach policy response: {}".format(response))
 
-        response = c_iot.attach_thing_principal(
+        response = c_iot.detach_thing_principal(
             thingName = thing_name,
             principal = provisioned_info['certificate_arn']
         )
         logger.info("attach thing principal response: {}".format(response)) 
 
-        # set to inactivel
-        response = c_iot.update_certificate(
-            principal = provisioned_info['certificate_id'],
-            newStatus='INACTIVE'
-        )
-        logger.info("set certificate to inactive response: {}".format(response)) 
+        # # set to inactivel
+        # response = c_iot.update_certificate(
+        #     principal = provisioned_info['certificate_id'],
+        #     newStatus='INACTIVE'
+        # )
+        # logger.info("set certificate to inactive response: {}".format(response)) 
 
-        # delete the certificate
-        c_iot.delete_certificate(
-            principal = provisioned_info['certificate_id'], 
-            forceDelete=True
-        )
+        # # delete the certificate
+        # c_iot.delete_certificate(
+        #     principal = provisioned_info['certificate_id'], 
+        #     forceDelete=True
+        # )
 
     # attach policy to certificate
     response = c_iot.attach_policy(
