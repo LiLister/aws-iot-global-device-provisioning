@@ -271,7 +271,7 @@ def provision_device(thing_name, sn, version, region, CSR, identity_id, provisio
             )
             logger.info("detach policy response: {}".format(response))
         except Exception as e:
-            logger.error("detach policy failed: " + e.message) 
+            logger.error("detach policy failed: {}".format(e))
 
         try:
             response = c_iot.detach_thing_principal(
@@ -280,7 +280,7 @@ def provision_device(thing_name, sn, version, region, CSR, identity_id, provisio
             )
             logger.info("attach thing principal response: {}".format(response)) 
         except Exception as e:
-            logger.error("detach thing principal failed: " + e.message)
+            logger.error("detach thing principal failed: {}".format(e))
 
         # # set to inactivel
         # response = c_iot.update_certificate(
