@@ -342,6 +342,7 @@ def device_provisioned_to(sn):
     )
     logger.info("response: {}".format(response))
 
+    result = {}
     if 'Count' in response and response['Count'] == 1:
         item = response['Items'][0] 
         result['sn'] = sn
