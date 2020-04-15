@@ -198,8 +198,8 @@ def create_iot_policy_for_user_if_missing(c_iot, thing_name, identity_id):
 
 
 def provision_device(thing_name, sn, version, region, CSR, identity_id, provisioned_info):
-    thing_nam = thing_name.replace(" ", "-") + sn.replace(":", "-").replace("_", "-")
-    has_previous_user = len(provisioned_info) > 0
+    thing_name = thing_name.replace(" ", "-") + sn.replace(":", "-").replace("_", "-")
+    has_previous_user = 'user_id' in provisioned_info
 
     answer = {}
     logger.info("thing_name: {}, region {}".format(thing_name, region))
@@ -344,7 +344,7 @@ def device_provisioned_to(sn):
     logger.info("key {}".format(attributeValues))
 
     response = c_dynamo.query(TableName = dynamodb_table_name, 
-    IndexName='sn-user_id-index', ExpressionAttributeValues=attributeValues,
+    IndexName='sn-index', ExpressionAttributeValues=attributeValues,
     KeyConditionExpression='sn=:sn'
     )
     logger.info("response: {}".format(response))
@@ -374,12 +374,12 @@ def update_device_provisioning_status(sn, default_region, thing_name, version, i
     c_dynamo = boto3.client('dynamodb')
     datetime = time.strftime("%Y-%m-%dT%H:%M:%S", gmtime())
 
-    key = {"sn": {"S": sn}}
+    key = {"thing_name": {"S": thing_name}}
     logger.info("key {}".format(key))
     update_expression = "SET prov_status = :s, prov_datetime = :d, aws_region = :r, alias_name = :an, version = :v, " 
-    + "identity-id = :i, thing_name = :tn, cert_id = :ci, cert_arn = :ca"
+    + "identity-id = :i, cert_id = :ci, cert_arn = :ca"
     expression_attribute_values = {":s": {"S": "provisioned"}, ":d": {"S": datetime}, ":r": {"S": region},
-    ":an": {"S": thing_name}, ":v": {"S": version}, ":i": {"S": identity_id}, ":tn": {"S": other['thing_name']},
+    ":an": {"S": thing_name}, ":v": {"S": version}, ":i": {"S": identity_id}, 
     ":ci": {"S": other['certificate_id']}, ":ca": {"S": other['certificate_arn']}}
 
     response = c_dynamo.update_item(
