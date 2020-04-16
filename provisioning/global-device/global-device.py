@@ -85,8 +85,8 @@ csr_file = thing_name + '.device.csr.pem'
 cert_file = thing_name + '.device.cert.pem'
 endpoint_file = thing_name + '.endpoint'
 
-
-if os.path.isfile(key_file) and os.path.isfile(cert_file):
+# NOTE: here I added 'and False' just for test purpose.
+if os.path.isfile(key_file) and os.path.isfile(cert_file) and False:
     print("=> device already provisioned")
     f = open(endpoint_file, 'r')
     line = f.readline().rstrip('\n')
@@ -208,7 +208,7 @@ certificatePath = cert_file
 privateKeyPath = key_file
 clientId = thing_name
 topic = "data/" + thing_name + "/misc"
-topic = "$aws/things/mydevice6/shadow/update"
+# topic = "$aws/things/mydevice6/shadow/update"
 
 
 myAWSIoTMQTTClient = None
