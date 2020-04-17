@@ -111,7 +111,7 @@ else:
     priv_key_pem = f.read()
     f.close()
     priv_key = crypto.load_privatekey(crypto.FILETYPE_PEM, priv_key_pem)
-    sig = crypto.sign(priv_key, thing_name, 'sha256')
+    sig = crypto.sign(priv_key, sn, 'sha256')
     sig = base64.b64encode(sig)
 
     # ### Create a Provisioning Request with own private key and CSR
@@ -146,9 +146,9 @@ else:
         print("=> faking device name")
         thing_name = str(uuid.uuid4())
 
-    payload = {'thing-name': thing_name, 'thing-name-sig': sig, 'identity-id' : identity_id, 'sn' : sn, 'version' : version}
+    payload = {'thing-name': thing_name, 'sn-sig': sig, 'identity-id' : identity_id, 'sn' : sn, 'version' : version}
     if use_own_priv_key:
-        payload = {'thing-name': thing_name, 'thing-name-sig': sig, 'identity-id' : identity_id, 'sn' : sn, 'version' : version,
+        payload = {'thing-name': thing_name, 'sn-sig': sig, 'identity-id' : identity_id, 'sn' : sn, 'version' : version,
         'CSR': crypto.dump_certificate_request(crypto.FILETYPE_PEM, csr)}
 
     print("=> request payload that will be send to the API Gateway...")

@@ -34,7 +34,7 @@ from geopy.distance import great_circle
 # ipstack_api_key = os.environ['IPSTACK_API_KEY']
 
 iot_policy_name = 'GlobalDevicePolicy'
-dynamodb_table_name = 'iot-global-provisioning'
+dynamodb_table_name = 'iot-global-provisioning-v1'
 pub_key_file = 'global-provisioning.pub.key.pem'
 
 # Configure logging
@@ -198,7 +198,7 @@ def create_iot_policy_for_user_if_missing(c_iot, thing_name, identity_id):
 
 
 def provision_device(thing_name, sn, version, region, CSR, identity_id, provisioned_info):
-    thing_name = thing_name.replace(" ", "-") + sn.replace(":", "-").replace("_", "-")
+    thing_name = thing_name.replace(" ", "-") + "-" + sn.replace(":", "-").replace("_", "-")
     has_previous_user = 'user_id' in provisioned_info
 
     answer = {}
@@ -316,9 +316,9 @@ def provision_device(thing_name, sn, version, region, CSR, identity_id, provisio
     return answer
 
 
-def device_pub_key_pem_for_provisioning(thing_name):
+def device_pub_key_pem_for_provisioning(sn):
     c_dynamo = boto3.client('dynamodb')
-    key = {"thing_name": {"S": thing_name}}
+    key = {"sn": {"S": sn}}
     logger.info("key {}".format(key))
 
     response = c_dynamo.get_item(TableName = dynamodb_table_name, Key = key)
@@ -333,26 +333,23 @@ def device_pub_key_pem_for_provisioning(thing_name):
             logger.warn("no pub_key_pem in result")
             return ""
     else:
-        logger.error("thing {} not found in DynamoDB".format(thing_name))
+        logger.error("thing {} not found in DynamoDB".format(sn))
 
     return "" 
 
 
 def device_provisioned_to(sn):
     c_dynamo = boto3.client('dynamodb')
-    attributeValues = {":sn": {"S": sn}}
-    logger.info("key {}".format(attributeValues))
+    key = {"sn": {"S": sn}}
+    logger.info("key {}".format(key))
 
-    response = c_dynamo.query(TableName = dynamodb_table_name, 
-    IndexName='sn-index', ExpressionAttributeValues=attributeValues,
-    KeyConditionExpression='sn=:sn'
-    )
+    response = c_dynamo.get_ittem(TableName = dynamodb_table_name, Key = key)
     logger.info("response: {}".format(response))
 
     result = {}
-    if 'Count' in response and response['Count'] == 1:
+    if 'Item' in response:
         result['sn'] = sn
-        item = response['Items'][0] 
+        item = response['Items'] 
         if 'prov_status' in item:
             status = item['prov_status']['S']
             logger.info("status: {}".format(status))
@@ -374,13 +371,13 @@ def update_device_provisioning_status(sn, region, thing_name, version, identity_
     c_dynamo = boto3.client('dynamodb')
     datetime = time.strftime("%Y-%m-%dT%H:%M:%S", gmtime())
 
-    key = {"thing_name": {"S": thing_name}}
+    key = {"sn": {"S": sn}}
     logger.info("key {}".format(key))
     update_expression = "SET prov_status = :s, prov_datetime = :d, aws_region = :r, alias_name = :an, version = :v, " \
-        "user_id = :i, certificate_id = :ci, certificate_arn = :ca"
+        "user_id = :i, certificate_id = :ci, certificate_arn = :ca, thing_name = :tn"
     expression_attribute_values = {":s": {"S": "provisioned"}, ":d": {"S": datetime}, ":r": {"S": region},
     ":an": {"S": thing_name}, ":v": {"S": version}, ":i": {"S": identity_id}, 
-    ":ci": {"S": other['certificate_id']}, ":ca": {"S": other['certificate_arn']}}
+    ":ci": {"S": other['certificate_id']}, ":ca": {"S": other['certificate_arn']}, ":tn": {"S": other["thing_name"]}}
 
     logger.info("expression_attribute_values: {}".format(expression_attribute_values))
 
@@ -424,7 +421,7 @@ def lambda_handler(event, context):
     sn = None
     # optional
     version = '1.0'
-    thing_name_sig = None
+    sn_sig = None
     CSR = None
     identity_id = None
     answer = {}
@@ -433,8 +430,8 @@ def lambda_handler(event, context):
         if 'thing-name' in event['body-json']:
             thing_name = event['body-json']['thing-name']
 
-        if 'thing-name-sig' in event['body-json']:
-            thing_name_sig = event['body-json']['thing-name-sig']
+        if 'sn-sig' in event['body-json']:
+            sn_sig = event['body-json']['sn-sig']
         
         if 'sn' in event['body-json']:
             sn = event['body-json']['sn']
@@ -453,7 +450,7 @@ def lambda_handler(event, context):
 
 
     logger.info("thing_name: {}".format(thing_name))
-    logger.info("thing_name_sig: {}".format(thing_name_sig))
+    logger.info("sn_sig: {}".format(sn_sig))
     logger.info("sn: {}".format(sn))
     logger.info("version: {}".format(version))
     logger.info('identity-id: {}'.format(identity_id))
@@ -463,11 +460,11 @@ def lambda_handler(event, context):
         logger.error("no thing-name in request")
         return {"status": "error", "message": "no thing name"}
 
-    if thing_name_sig == None:
-        logger.error("no thing-name-sig in request")
+    if sn_sig == None:
+        logger.error("no sn-sig in request")
         return {"status": "error", "message": "no sig"}
 
-    if not sig_verified(thing_name, thing_name_sig):
+    if not sig_verified(sn, sn_sig):
         logger.error("signature could not be verified")
         return {"status": "error", "message": "wrong sig"}
 
