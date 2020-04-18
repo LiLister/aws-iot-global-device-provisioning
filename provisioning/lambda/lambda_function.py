@@ -349,7 +349,7 @@ def device_provisioned_to(sn):
     result = {}
     if 'Item' in response:
         result['sn'] = sn
-        item = response['Items'] 
+        item = response['Item'] 
         if 'prov_status' in item:
             status = item['prov_status']['S']
             logger.info("status: {}".format(status))
