@@ -343,7 +343,7 @@ def device_provisioned_to(sn):
     key = {"sn": {"S": sn}}
     logger.info("key {}".format(key))
 
-    response = c_dynamo.get_ittem(TableName = dynamodb_table_name, Key = key)
+    response = c_dynamo.get_item(TableName = dynamodb_table_name, Key = key)
     logger.info("response: {}".format(response))
 
     result = {}
