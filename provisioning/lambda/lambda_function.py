@@ -369,7 +369,7 @@ def device_provisioned_to(sn):
 
 def update_device_provisioning_status(sn, region, thing_name, version, identity_id, user_name, other):
     c_dynamo = boto3.client('dynamodb')
-    datetime = time.strftime("%Y-%m-%dT%H:%M:%S", gmtime())
+    datetime = time.strftime("%Y-%m-%dT%H:%M:%S%z", gmtime())
 
     key = {"sn": {"S": sn}}
     logger.info("key {}".format(key))
