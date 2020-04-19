@@ -53,6 +53,7 @@ parser = argparse.ArgumentParser(description='Sample device for global provision
 parser.add_argument("-t", "--thing-name", action="store", required=True, dest="thing_name", help="thing name for your device")
 parser.add_argument("-a", "--api-gw", action="store", required=True, dest="api_gw", help="API Gateway URL for device provisioning")
 parser.add_argument("-i", "--identity-id", action="store", required=True, dest="identity_id", help="Identity Id to bind this device to")
+parser.add_argument("-u", "--user-name", action="store", required=True, dest="user_name", help="User name to bind this device to")
 parser.add_argument("-s", "--serial-number", action="store", required=True, dest="sn", help="Serial number of this device")
 parser.add_argument("-v", "--version", action="store", required=True, dest="version", help="Version of this device")
 parser.add_argument("-k", "--own-key", action="store_true", dest="use_own_priv_key", default=False,
@@ -66,6 +67,7 @@ args = parser.parse_args()
 thing_name = args.thing_name
 api_gw = args.api_gw
 identity_id = args.identity_id
+user_name = args.user_name
 sn = args.sn
 version = args.version
 use_own_priv_key = args.use_own_priv_key
@@ -146,9 +148,9 @@ else:
         print("=> faking device name")
         thing_name = str(uuid.uuid4())
 
-    payload = {'thing-name': thing_name, 'sn-sig': sig, 'identity-id' : identity_id, 'sn' : sn, 'version' : version}
+    payload = {'thing-name': thing_name, 'sn-sig': sig, 'identity-id' : identity_id, 'user-name': user_name, 'sn' : sn, 'version' : version}
     if use_own_priv_key:
-        payload = {'thing-name': thing_name, 'sn-sig': sig, 'identity-id' : identity_id, 'sn' : sn, 'version' : version,
+        payload = {'thing-name': thing_name, 'sn-sig': sig, 'identity-id' : identity_id, 'user-name': user_name, 'sn' : sn, 'version' : version,
         'CSR': crypto.dump_certificate_request(crypto.FILETYPE_PEM, csr)}
 
     print("=> request payload that will be send to the API Gateway...")

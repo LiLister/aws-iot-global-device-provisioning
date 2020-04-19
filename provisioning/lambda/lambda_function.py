@@ -367,17 +367,17 @@ def device_provisioned_to(sn):
     return result
 
 
-def update_device_provisioning_status(sn, region, thing_name, version, identity_id, other):
+def update_device_provisioning_status(sn, region, thing_name, version, identity_id, user_name, other):
     c_dynamo = boto3.client('dynamodb')
     datetime = time.strftime("%Y-%m-%dT%H:%M:%S", gmtime())
 
     key = {"sn": {"S": sn}}
     logger.info("key {}".format(key))
     update_expression = "SET prov_status = :s, prov_datetime = :d, aws_region = :r, alias_name = :an, version = :v, " \
-        "user_id = :i, certificate_id = :ci, certificate_arn = :ca, thing_name = :tn"
+        "user_id = :i, certificate_id = :ci, certificate_arn = :ca, thing_name = :tn, user_name= :un"
     expression_attribute_values = {":s": {"S": "provisioned"}, ":d": {"S": datetime}, ":r": {"S": region},
-    ":an": {"S": thing_name}, ":v": {"S": version}, ":i": {"S": identity_id}, 
-    ":ci": {"S": other['certificate_id']}, ":ca": {"S": other['certificate_arn']}, ":tn": {"S": other["thing_name"]}}
+    ":an": {"S": thing_name}, ":v": {"S": version}, ":i": {"S": identity_id}, ":ci": {"S": other['certificate_id']}, 
+    ":ca": {"S": other['certificate_arn']}, ":tn": {"S": other["thing_name"]}, ":un": {"S": user_name}}
 
     logger.info("expression_attribute_values: {}".format(expression_attribute_values))
 
@@ -424,6 +424,7 @@ def lambda_handler(event, context):
     sn_sig = None
     CSR = None
     identity_id = None
+    user_name = None
     answer = {}
 
     if 'body-json' in event:
@@ -442,6 +443,9 @@ def lambda_handler(event, context):
         if 'identity-id' in event['body-json']:
             identity_id = event['body-json']['identity-id']
 
+        if 'user-name' in event['body-json']:
+            user_name = event['body-json']['user-name']
+
         if 'CSR' in event['body-json']:
             CSR = event['body-json']['CSR']
     else:
@@ -454,6 +458,7 @@ def lambda_handler(event, context):
     logger.info("sn: {}".format(sn))
     logger.info("version: {}".format(version))
     logger.info('identity-id: {}'.format(identity_id))
+    logger.info("user_name: {}".format(user_name))
     logger.info("CSR: {}".format(CSR))
 
     if thing_name == None:
@@ -475,6 +480,10 @@ def lambda_handler(event, context):
     if identity_id == None:
         logger.error("no identity id provided to bind device to")
         return {"status": "error", "message": "no identity id"}
+
+    if user_name == None:
+        logger.error("no user name  provided to bind device to")
+        return {"status": "error", "message": "no user name"}
 
     # if 'params' in event and 'header' in event['params'] and 'X-Forwarded-For' in event['params']['header']:
     #     device_addrs = str(event['params']['header']['X-Forwarded-For']).translate(None, string.whitespace).split(',')
@@ -513,7 +522,7 @@ def lambda_handler(event, context):
     # answer['message'] = "no latitude or longitude for IP {}, using default region {}".format(device_addrs[0], default_region)
     answer['status'] = 'success'
     # update_device_provisioning_status(sn, best_region['region'])
-    update_device_provisioning_status(sn, default_region, thing_name, version, identity_id, answer)
+    update_device_provisioning_status(sn, default_region, thing_name, version, identity_id, user_name, answer)
 
     answer.pop('certificate_id', None)
     answer.pop('certificate_arn', None)
