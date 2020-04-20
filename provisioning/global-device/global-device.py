@@ -75,6 +75,7 @@ continue_provisioning = args.continue_provisioning
 fake_device = args.fake_device
 
 endpoint = None
+registered_thing_name = None
 
 def cont():
     if continue_provisioning:
@@ -183,6 +184,8 @@ else:
     if not use_own_priv_key:
         print("<= PrivateKey\n{}".format(r.json()["PrivateKey"]))
 
+    # get the registered thing name
+    registered_thing_name = r.json()['thing_name']
 
     # ### Store Key and Certificate
     # Write key and certificate to file.
@@ -208,8 +211,8 @@ cont()
 host = endpoint
 certificatePath = cert_file
 privateKeyPath = key_file
-clientId = thing_name
-topic = "data/" + thing_name + "/misc"
+clientId = registered_thing_name
+topic = "data/" + registered_thing_name + "/misc"
 # topic = "$aws/things/mydevice6/shadow/update"
 
 
@@ -242,7 +245,7 @@ else:
 print("=> start publishing... press <ctrl+c> to abort")
 
 while True:
-    message = {"thing-name": thing_name, "global": "device provisioning",
+    message = {"thing-name": registered_thing_name, "global": "device provisioning",
                "datetime": time.strftime("%Y-%m-%dT%H:%M:%S", gmtime())}
     print ("=> publishing message: {}".format(message))
     myAWSIoTMQTTClient.publish(topic, json.dumps(message, indent=4), 0)
