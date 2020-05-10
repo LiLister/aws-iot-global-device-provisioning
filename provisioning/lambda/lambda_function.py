@@ -115,8 +115,8 @@ def create_iot_policy_if_missing(c_iot, region):
         if re.match('.*ResourceNotFoundException.*', str(e)):
             logger.info("creating iot policy {}".format(iot_policy_name))
             account_id = get_account_id()
-            arn_connect = 'arn:aws:iot:' + region + ':' + account_id + ':client/${iot:ClientId}'
-            arn_publish = 'arn:aws:iot:' + region + ':' + account_id + ':topic/data/${iot:ClientId}/*'
+            arn_connect = 'arn:aws-cn:iot:' + region + ':' + account_id + ':client/${iot:ClientId}'
+            arn_publish = 'arn:aws-cn:iot:' + region + ':' + account_id + ':topic/data/${iot:ClientId}/*'
             logger.info("arn_connect: {}".format(arn_connect))
             logger.info("arn_publish: {}".format(arn_publish))
 
@@ -161,7 +161,7 @@ def create_iot_policy_for_user_if_missing(c_iot, thing_name, identity_id):
                     {
                         "Effect": "Allow",
                         "Action": "iot:Connect", 
-                        "Resource": "arn:aws:iot:cn-north-1:214483337465:*" 
+                        "Resource": "arn:aws-cn:iot:cn-north-1:214483337465:*" 
                     }, 
                     {
                         "Effect": "Allow",
@@ -171,8 +171,8 @@ def create_iot_policy_for_user_if_missing(c_iot, thing_name, identity_id):
                             "iot:Subscribe"
                         ],
                         "Resource": [ 
-                            "arn:aws:iot:cn-north-1:214483337465:topic/$aws/things/''' + thing_name  + '''/*",
-                            "arn:aws:iot:cn-north-1:214483337465:topicfilter/$aws/things/''' + thing_name + '''/*" 
+                            "arn:aws-cn:iot:cn-north-1:214483337465:topic/$aws/things/''' + thing_name  + '''/*",
+                            "arn:aws-cn:iot:cn-north-1:214483337465:topicfilter/$aws/things/''' + thing_name + '''/*" 
                         ] 
                     },
                     { 
@@ -181,7 +181,7 @@ def create_iot_policy_for_user_if_missing(c_iot, thing_name, identity_id):
                             "iot:GetThingShadow", 
                             "iot:UpdateThingShadow" 
                         ], 
-                        "Resource": "arn:aws:iot:cn-north-1:214483337465:thing/''' + thing_name + '''" 
+                        "Resource": "arn:aws-cn:iot:cn-north-1:214483337465:thing/''' + thing_name + '''" 
                     } 
                 ]
             }'''
