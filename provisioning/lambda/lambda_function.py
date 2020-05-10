@@ -68,7 +68,7 @@ regions = [
     {"name": "eu-west-2", "lat": "51.7", "lon": "0.1"}
 ]
 
-default_region = "us-west-2"
+default_region = "cn-north-1"
 
 # def get_ip_location(ip):
 #     request_url = ipstack_api_url + '/' + ip + '?access_key=' + ipstack_api_key
@@ -161,7 +161,7 @@ def create_iot_policy_for_user_if_missing(c_iot, thing_name, identity_id):
                     {
                         "Effect": "Allow",
                         "Action": "iot:Connect", 
-                        "Resource": "arn:aws:iot:us-east-2:443188300111:*" 
+                        "Resource": "arn:aws:iot:cn-north-1:214483337465:*" 
                     }, 
                     {
                         "Effect": "Allow",
@@ -171,8 +171,8 @@ def create_iot_policy_for_user_if_missing(c_iot, thing_name, identity_id):
                             "iot:Subscribe"
                         ],
                         "Resource": [ 
-                            "arn:aws:iot:us-east-2:443188300111:topic/$aws/things/''' + thing_name  + '''/*",
-                            "arn:aws:iot:us-east-2:443188300111:topicfilter/$aws/things/''' + thing_name + '''/*" 
+                            "arn:aws:iot:cn-north-1:214483337465:topic/$aws/things/''' + thing_name  + '''/*",
+                            "arn:aws:iot:cn-north-1:214483337465:topicfilter/$aws/things/''' + thing_name + '''/*" 
                         ] 
                     },
                     { 
@@ -181,7 +181,7 @@ def create_iot_policy_for_user_if_missing(c_iot, thing_name, identity_id):
                             "iot:GetThingShadow", 
                             "iot:UpdateThingShadow" 
                         ], 
-                        "Resource": "arn:aws:iot:us-east-2:443188300111:thing/''' + thing_name + '''" 
+                        "Resource": "arn:aws:iot:cn-north-1:214483337465:thing/''' + thing_name + '''" 
                     } 
                 ]
             }'''
