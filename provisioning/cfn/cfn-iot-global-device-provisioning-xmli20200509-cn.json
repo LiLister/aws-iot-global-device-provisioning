@@ -194,7 +194,7 @@
     "IoTApiGWUrl": {
       "Description": "Amazon API Gateway URL for global iot device provisioning.",
       "Value": {"Fn::Join": ["",
-        ["https://", {"Ref": "IoTApi"}, ".execute-api.", {"Ref": "AWS::Region"}, ".amazonaws.com/test/device-provisioning"]
+        ["https://", {"Ref": "IoTApi"}, ".execute-api.", {"Ref": "AWS::Region"}, ".amazonaws.com.cn/test/device-provisioning"]
       ]}
     }
   }
