@@ -1,0 +1,8 @@
+
+AWS root cert
+
+a private key and public key for sig verify
+
+generate private key for device; -- get from server
+generate CSR; -- no need if not use private key
+receive certificate and endpoint for device;
