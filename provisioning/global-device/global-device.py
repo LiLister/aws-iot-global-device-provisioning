@@ -89,7 +89,7 @@ cert_file = thing_name + '.device.cert.pem'
 endpoint_file = thing_name + '.endpoint'
 
 # NOTE: here I added 'and False' just for test purpose.
-if os.path.isfile(key_file) and os.path.isfile(cert_file) and False:
+if os.path.isfile(key_file) and os.path.isfile(cert_file):
     print("=> device already provisioned")
     f = open(endpoint_file, 'r')
     line = f.readline().rstrip('\n')
@@ -207,6 +207,10 @@ else:
 
 print("=> device is ready to communicate with AWS IoT...")
 cont()
+
+# hacked for test
+if (registered_thing_name == None):
+    registered_thing_name = 'foodcycler-test2-aaaa-bbbb-cccc'
 
 host = endpoint
 certificatePath = cert_file

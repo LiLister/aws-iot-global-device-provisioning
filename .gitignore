@@ -5,6 +5,10 @@
 script.txt
 test.json
 
+provisioning/global-device/policy.json
+request.json
+response.json
+
 provisioning/lambda/bin/
 provisioning/lambda/certifi/
 provisioning/lambda/certifi-2020.4.5.1.dist-info
