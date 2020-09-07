@@ -4,6 +4,9 @@
 **/*.zip
 script.txt
 test.json
+provisioning/global-device/policy.json
+request.json
+response.json
 
 provisioning/lambda/bin/
 provisioning/lambda/certifi/

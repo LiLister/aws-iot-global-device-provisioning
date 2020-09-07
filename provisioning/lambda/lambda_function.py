@@ -33,7 +33,7 @@ from geopy.distance import great_circle
 # ipstack_api_url = 'http://api.ipstack.com/'
 # ipstack_api_key = os.environ['IPSTACK_API_KEY']
 
-iot_policy_name = 'GlobalDevicePolicy'
+# iot_policy_name = 'DevicePolicy'
 dynamodb_table_name = 'iot-global-provisioning-v1'
 pub_key_file = 'global-provisioning.pub.key.pem'
 
@@ -107,7 +107,7 @@ def get_account_id():
     return response['Account']
 
 
-def create_iot_policy_if_missing(c_iot, region):
+def create_iot_policy_if_missing(iot_policy_name, c_iot, region, thing_name):
     try:
         response = c_iot.get_policy(policyName = iot_policy_name)
         logger.info("policy exists already: response: {}".format(response))
@@ -116,7 +116,7 @@ def create_iot_policy_if_missing(c_iot, region):
             logger.info("creating iot policy {}".format(iot_policy_name))
             account_id = get_account_id()
             arn_connect = 'arn:aws:iot:' + region + ':' + account_id + ':client/${iot:ClientId}'
-            arn_publish = 'arn:aws:iot:' + region + ':' + account_id + ':topic/data/${iot:ClientId}/*'
+            arn_publish = 'arn:aws:iot:' + region + ':' + account_id + ':topic/$aws/things/' + thing_name + '/shadow/*'
             logger.info("arn_connect: {}".format(arn_connect))
             logger.info("arn_publish: {}".format(arn_publish))
 
@@ -129,7 +129,16 @@ def create_iot_policy_if_missing(c_iot, region):
                 },
                 {
                     "Effect": "Allow",
-                    "Action": ["iot:Publish"],
+                    "Action": [
+                        "iot:Subscribe"
+                    ],
+                    "Resource": [
+                        "*"
+                    ]
+                },
+                {
+                    "Effect": "Allow",
+                    "Action": ["iot:Publish","iot:Receive"],
                     "Resource": [ "''' + arn_publish + '''" ]
                 }]
             }'''
@@ -211,7 +220,8 @@ def provision_device(thing_name, sn, version, region, CSR, identity_id, provisio
     answer['endpointAddress'] = response['endpointAddress']
 
     # create policy if missing
-    create_iot_policy_if_missing(c_iot, region)
+    iot_policy_name = "device-policy-" + thing_name.replace(":", "@").replace("_", "-")
+    create_iot_policy_if_missing(iot_policy_name, c_iot, region, thing_name)
 
     # create thing
     if (not has_previous_user):
