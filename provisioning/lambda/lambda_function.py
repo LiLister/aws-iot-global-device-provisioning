@@ -288,7 +288,7 @@ def provision_device(thing_name, sn, version, region, CSR, identity_id, provisio
                 thingName = thing_name,
                 principal = provisioned_info['certificate_arn']
             )
-            logger.info("attach thing principal response: {}".format(response)) 
+            logger.info("detach thing principal response: {}".format(response)) 
         except Exception as e:
             logger.error("detach thing principal failed: {}".format(e))
 
