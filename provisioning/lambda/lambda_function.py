@@ -115,9 +115,9 @@ def create_iot_policy_if_missing(iot_policy_name, c_iot, region, thing_name):
         if re.match('.*ResourceNotFoundException.*', str(e)):
             logger.info("creating iot policy {}".format(iot_policy_name))
             account_id = get_account_id()
-            arn_connect = 'arn:aws:iot:' + region + ':' + account_id + ':client/${iot:ClientId}'
+            arn_subscribe = 'arn:aws:iot:' + region + ':' + account_id + ':topicfilter/$aws/things/' + thing_name + '/shadow/*'
             arn_publish = 'arn:aws:iot:' + region + ':' + account_id + ':topic/$aws/things/' + thing_name + '/shadow/*'
-            logger.info("arn_connect: {}".format(arn_connect))
+            logger.info("arn_subscribe: {}".format(arn_subscribe))
             logger.info("arn_publish: {}".format(arn_publish))
 
             policy_document = '''{
@@ -125,7 +125,7 @@ def create_iot_policy_if_missing(iot_policy_name, c_iot, region, thing_name):
                 "Statement": [{
                     "Effect": "Allow",
                     "Action": ["iot:Connect"],
-                    "Resource": [ "''' + arn_connect + '''" ]
+                    "Resource": [ "*" ]
                 },
                 {
                     "Effect": "Allow",
@@ -133,7 +133,7 @@ def create_iot_policy_if_missing(iot_policy_name, c_iot, region, thing_name):
                         "iot:Subscribe"
                     ],
                     "Resource": [
-                        "*"
+                        "''' + arn_subscribe + '''"
                     ]
                 },
                 {
