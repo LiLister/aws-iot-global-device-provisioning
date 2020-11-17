@@ -175,14 +175,21 @@ def create_iot_policy_for_user_if_missing(c_iot, thing_name, identity_id):
                     {
                         "Effect": "Allow",
                         "Action": [
-                            "iot:Receive",
-                            "iot:Publish",
                             "iot:Subscribe"
                         ],
                         "Resource": [ 
-                            "arn:aws:iot:us-east-2:443188300111:topic/$aws/things/''' + thing_name  + '''/*",
                             "arn:aws:iot:us-east-2:443188300111:topicfilter/$aws/things/''' + thing_name + '''/*" 
                         ] 
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Action": [
+                            "iot:Receive",
+                            "iot:Publish"
+                        ],
+                        "Resource": [
+                            "arn:aws:iot:us-east-2:443188300111:topic/$aws/things/''' + thing_name  + '''/*"
+                        ]
                     },
                     { 
                         "Effect": "Allow", 
